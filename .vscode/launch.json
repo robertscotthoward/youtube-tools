@@ -1,7 +1,6 @@
 {
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Python: Current File",
             "type": "debugpy",
@@ -16,6 +15,15 @@
             "name": "Python: main",
             "type": "debugpy",
             "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: main --pull",
+            "type": "debugpy",
+            "request": "launch",
+            "args": ["--pull", "https://www.youtube.com/watch?v=deDg1MQh4_Y"],
+            // "args": ["--pull", "https://www.youtube.com/@PrometheanAction/videos"],
             "program": "main.py",
             "console": "integratedTerminal"
         }
