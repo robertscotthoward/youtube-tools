@@ -6,8 +6,13 @@ python main.py --pull https://www.youtube.com/watch?v=n2a1FfqjHcU
 If "n2a1FfqjHcU.json" does not exists, then pull it.
 If "n2a1FfqjHcU.txt" does not exists, then pull the transcript.
 If "n2a1FfqjHcU.md" does not exists, then summarize the main points of the txt file transcript.
+The files should be saved under cache\summaries
 
 
+# Updates
+```
+uv add --upgrade youtube-transcript-api
+```
 
 
 

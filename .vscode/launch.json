@@ -40,7 +40,7 @@
             "name": "Python: main --pull @EmergingVoicesStudio",
             "type": "debugpy",
             "request": "launch",
-            //"args": ["--pull", "https://www.youtube.com/watch?v=78T1ysWu9hw"],
+            //"args": ["--pull", "https://www.youtube.com/watch?v=mGcdxFPwBdU"],
             "args": ["--pull", "https://www.youtube.com/@EmergingVoicesStudio"],
             "program": "main.py",
             "console": "integratedTerminal"

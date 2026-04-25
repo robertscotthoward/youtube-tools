@@ -277,8 +277,10 @@ Tags: {', '.join(v.get('tags', []))}
 Transcript: {v['transcript']}
 """.strip())
             return v
-
+        
     v = get_json_cache(fn, func)
+
+    summarize_one(v)
 
 
 def extract_video_id(video_url):
@@ -353,7 +355,6 @@ def pull_video(video_url):
             print(f"  Cannot create {md_file} - no transcript available")
     else:
         print(f"  {md_file} already exists")
-
 
 
 def organize():
