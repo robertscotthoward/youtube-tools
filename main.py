@@ -247,9 +247,33 @@ https://www.youtube.com/@GDiesen1/videos"""
     pass
 
 
-def summarize():
-    for fn in os.listdir("cache/summaries/"):
-        pass # ???
+def summarize_all():
+    """Summarize all .txt files that don't have a corresponding .md file."""
+    summaries_dir = "cache/summaries"
+    if not os.path.exists(summaries_dir):
+        print(f"Directory {summaries_dir} does not exist")
+        return
+
+    count = 0
+    for fn in os.listdir(summaries_dir):
+        if not fn.endswith(".txt"):
+            continue
+
+        txt_file = os.path.join(summaries_dir, fn)
+        md_file = txt_file.replace(".txt", ".md")
+
+        if os.path.exists(md_file):
+            continue
+
+        print(f"Summarizing {fn}...")
+        transcript_text = tools.readText(txt_file)
+        prompt = f"Summarize the main points of the following YouTube video transcript as markdown. Include no ASCII art or emojis:\n\n{transcript_text}"
+        summary = modelstack.query(prompt)
+        tools.writeText(md_file, summary)
+        print(f"  Created {md_file}")
+        count += 1
+
+    print(f"Summarized {count} file(s)")
 
             
 def pull_transcript(video_url):
@@ -401,8 +425,8 @@ def update():
 
 @app.command()
 def summarize():
-    """Summarize video transcripts."""
-    summarize()
+    """Summarize all .txt files that don't have a corresponding .md file."""
+    summarize_all()
 
 
 @app.command()
