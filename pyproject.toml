@@ -11,4 +11,5 @@ dependencies = [
     "ruamel-yaml>=0.18.16",
     "pyyaml>=6.0.3",
     "boto3>=1.41.5",
+    "typer>=0.24.2",
 ]

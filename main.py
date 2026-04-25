@@ -4,8 +4,12 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import yt_dlp
 import json
 import os
+import typer
+from typing import Optional
 from lib.modelstack import ModelStack
 import lib.tools as tools
+
+app = typer.Typer()
 
 
 fromSeconds, toSeconds = 30, 60
@@ -376,29 +380,36 @@ def organize():
             os.link(src, dst)
         
 
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--pull", help="Pull transcripts from url")
-    parser.add_argument("-u", "--update", help="Update files to new version", action="store_true")
-    parser.add_argument("-s", "--summarize", help="Summarize video transcripts", action="store_true")
-    parser.add_argument("-o", "--organize", help="Organize video transcripts", action="store_true")
-    
-    args = parser.parse_args()
-
-    if args.pull:
-        url = args.pull
-        if "youtube.com/" in url or "youtu.be/" in url:
-            if "/watch" in url or "youtu.be/" in url:
-                pull_video(url)
-            else:
-                pull_transcripts(url)
-    elif args.update:
-        update()
-    elif args.summarize:
-        summarize()
-    elif args.organize:
-        organize()
+@app.command()
+def pull(url: str = typer.Argument(..., help="YouTube video or channel URL")):
+    """Pull transcripts from a YouTube URL."""
+    if "youtube.com/" in url or "youtu.be/" in url:
+        if "/watch" in url or "youtu.be/" in url:
+            pull_video(url)
+        else:
+            pull_transcripts(url)
     else:
-        print("Please provide a channel URL or a single video URL with the --channel or --video parameter")
-    #compile_transcripts(channel_url)
+        typer.echo("Invalid YouTube URL")
+        raise typer.Exit(1)
+
+
+@app.command()
+def update():
+    """Update files to new version."""
+    update()
+
+
+@app.command()
+def summarize():
+    """Summarize video transcripts."""
+    summarize()
+
+
+@app.command()
+def organize():
+    """Organize video transcripts."""
+    organize()
+
+
+if __name__ == "__main__":
+    app()
