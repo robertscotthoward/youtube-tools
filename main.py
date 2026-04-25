@@ -14,7 +14,7 @@ fromSeconds, toSeconds = 30, 60
 config = {
     'class': 'ollama',  
     'host':'http://localhost:11434',
-    'model': 'tinyllama:1.1b'
+    'model': 'gemma4:e4b'
 }
 modelstack = ModelStack.from_config(config)
 #print(modelstack.query("What city was Benjamin Franklin born in?"))
@@ -188,7 +188,7 @@ def update_one(jFn):
         tools.writeJson(jFn, j)
 
     if j.get('summary') is None:
-        prompt = f"Summarize the following YouTube video transcript in a concise paragraph:\n\n{j['transcript']}"
+        prompt = f"Summarize the following YouTube video transcript as markdown. Include no ASCII art or emojis:\n\n{j['transcript']}"
         j['summary'] = modelstack.query(prompt)
         tools.writeJson(jFn, j)
     
