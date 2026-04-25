@@ -1,3 +1,16 @@
+# Usage
+```
+python main.py --pull https://www.youtube.com/watch?v=n2a1FfqjHcU
+```
+"n2a1FfqjHcU" is the video ID.
+If "n2a1FfqjHcU.json" does not exists, then pull it.
+If "n2a1FfqjHcU.txt" does not exists, then pull the transcript.
+If "n2a1FfqjHcU.md" does not exists, then summarize the main points of the txt file transcript.
+
+
+
+
+
 # UV Template
 
 Use this process to create new Python projects in a convenient manner, such that:

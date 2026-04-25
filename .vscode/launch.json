@@ -19,11 +19,45 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: main --pull",
+            "name": "Python: main --pull channel",
             "type": "debugpy",
             "request": "launch",
-            "args": ["--pull", "https://www.youtube.com/watch?v=deDg1MQh4_Y"],
-            // "args": ["--pull", "https://www.youtube.com/@PrometheanAction/videos"],
+            //"args": ["--pull", "https://www.youtube.com/watch?v=78T1ysWu9hw"],
+            "args": ["--pull", "https://www.youtube.com/@PrometheanAction/videos"],
+            "program": "main.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: main --pull one",
+            "type": "debugpy",
+            "request": "launch",
+            //"args": ["--pull", "https://www.youtube.com/watch?v=78T1ysWu9hw"],
+            "args": ["--pull", "https://www.youtube.com/watch?v=n2a1FfqjHcU"],
+            "program": "main.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: main --pull @EmergingVoicesStudio",
+            "type": "debugpy",
+            "request": "launch",
+            //"args": ["--pull", "https://www.youtube.com/watch?v=78T1ysWu9hw"],
+            "args": ["--pull", "https://www.youtube.com/@EmergingVoicesStudio"],
+            "program": "main.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: main --update",
+            "type": "debugpy",
+            "request": "launch",
+            "args": ["--update"],
+            "program": "main.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: main --organize",
+            "type": "debugpy",
+            "request": "launch",
+            "args": ["--organize"],
             "program": "main.py",
             "console": "integratedTerminal"
         }

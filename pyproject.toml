@@ -1,7 +1,7 @@
 [project]
-name = "empty"
+name = "youtube-tools"
 version = "0.1.0"
-description = "Add your description here"
+description = "Pull transcripts"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -10,4 +10,5 @@ dependencies = [
     "yt-dlp>=2025.11.12",
     "ruamel-yaml>=0.18.16",
     "pyyaml>=6.0.3",
+    "boto3>=1.41.5",
 ]
