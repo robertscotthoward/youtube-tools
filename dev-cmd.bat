@@ -1,2 +1,1 @@
-call .venv\Scripts\activate
-start cmd
+start cmd /k call c:\users\rober\ai.bat && .venv\Scripts\activate

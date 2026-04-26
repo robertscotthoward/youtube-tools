@@ -4,8 +4,10 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import yt_dlp
 import json
 import os
+import re
 import typer
 from typing import Optional
+from bs4 import BeautifulSoup
 from lib.modelstack import ModelStack
 import lib.tools as tools
 
@@ -80,6 +82,7 @@ def all_videos(channel_url):
         'extract_flat': True,        # True = Faster, gets metadata without downloading
         'skip_download': True,
         'force_generic_extractor': False,
+        'js_runtimes': 'nodejs,deno',
         'extractor_args': {
             'youtube': {
                 'player_client': ['web', 'android'],  # avoid the broken clients
@@ -290,6 +293,7 @@ def pull_transcript(video_url):
             'extract_flat': True,        # True = Faster, gets metadata without downloading
             'skip_download': True,
             'force_generic_extractor': False,
+            'js_runtimes': 'nodejs,deno',
         }
 
         with yt_dlp.YoutubeDL(options) as ydl:
@@ -323,8 +327,8 @@ def extract_video_id(video_url):
 def pull_video(video_url):
     """
     Pull video data based on what files are missing:
-    - cache/summaries/{video_id}.json - video metadata
-    - cache/summaries/{video_id}.txt - transcript
+    - cache/videos/{video_id}.json - video metadata with transcript
+    - cache/summaries/{video_id}.txt - transcript text
     - cache/summaries/{video_id}.md - summary
     """
     video_id = extract_video_id(video_url)
@@ -332,38 +336,68 @@ def pull_video(video_url):
         print(f"Could not extract video ID from: {video_url}")
         return
 
-    # Ensure cache/summaries folder exists
+    # Ensure folders exist
+    os.makedirs("cache/videos", exist_ok=True)
     os.makedirs("cache/summaries", exist_ok=True)
 
-    json_file = f"cache/summaries/{video_id}.json"
+    videos_json_file = f"cache/videos/{video_id}.json"
     txt_file = f"cache/summaries/{video_id}.txt"
     md_file = f"cache/summaries/{video_id}.md"
 
-    # Step 1: Pull metadata if json doesn't exist
-    if not os.path.exists(json_file):
+    transcript_text = None
+
+    # Step 1: Pull metadata and transcript to cache/videos if json doesn't exist
+    if not os.path.exists(videos_json_file):
         print(f"Pulling metadata for {video_id}...")
         options = {
             'quiet': True,
             'extract_flat': True,
             'skip_download': True,
             'force_generic_extractor': False,
+            'js_runtimes': 'nodejs,deno',
         }
         with yt_dlp.YoutubeDL(options) as ydl:
             info = ydl.extract_info(video_url, download=False)
-            tools.writeJson(json_file, info)
-            print(f"  Created {json_file}")
-    else:
-        print(f"  {json_file} already exists")
 
-    # Step 2: Pull transcript if txt doesn't exist
+            # Get transcript
+            transcript = get_transcript(video_url)
+            if transcript:
+                transcript_text = " ".join([item['text'] for item in transcript]).strip()
+                transcript_text = transcript_text.replace(".", ".\n")
+                transcript_text = "\n".join([line.strip() for line in transcript_text.splitlines()])
+
+            # Extract channel name from URL if available
+            channel_name = None
+            if info.get('channel'):
+                channel_name = info.get('channel')
+            elif info.get('uploader'):
+                channel_name = info.get('uploader')
+
+            # Create structured JSON
+            video_data = {
+                "id": video_id,
+                "title": info.get('title'),
+                "url": video_url,
+                "duration": info.get('duration'),
+                "view_count": info.get('view_count'),
+                "upload_date": info.get('upload_date'),
+                "thumbnail": info.get('thumbnail'),
+                "uploader": info.get('uploader'),
+                "channel_name": channel_name,
+                "transcript": transcript_text
+            }
+            tools.writeJson(videos_json_file, video_data)
+            print(f"  Created {videos_json_file}")
+    else:
+        print(f"  {videos_json_file} already exists")
+        # Load existing data to get transcript
+        video_data = tools.readJson(videos_json_file)
+        transcript_text = video_data.get('transcript')
+
+    # Step 2: Create txt file in summaries if it doesn't exist
     if not os.path.exists(txt_file):
-        print(f"Pulling transcript for {video_id}...")
-        transcript = get_transcript(video_url)
-        if transcript:
-            text = " ".join([item['text'] for item in transcript]).strip()
-            text = text.replace(".", ".\n")
-            text = "\n".join([line.strip() for line in text.splitlines()])
-            tools.writeText(txt_file, text)
+        if transcript_text:
+            tools.writeText(txt_file, transcript_text)
             print(f"  Created {txt_file}")
         else:
             print(f"  No transcript available for {video_id}")
@@ -433,6 +467,159 @@ def summarize():
 def organize():
     """Organize video transcripts."""
     organize()
+
+
+def parse_search_history(html_content: str) -> list[tuple[str, str]]:
+    """Parse search-history.html and return list of (date, search_term) tuples."""
+    soup = BeautifulSoup(html_content, 'html.parser')
+    results = []
+
+    # Find all content cells with search data
+    content_cells = soup.find_all('div', class_='content-cell')
+
+    for cell in content_cells:
+        text = cell.get_text()
+        if 'Searched for' not in text:
+            continue
+
+        # Find the search link
+        link = cell.find('a')
+        if not link:
+            continue
+
+        search_term = link.get_text()
+        # Normalize whitespace in search term
+        search_term = re.sub(r'\s+', ' ', search_term).strip()
+
+        # Extract the date from the cell text
+        # Normalize whitespace (newlines, narrow no-break spaces, etc.)
+        cell_text = cell.get_text(separator=' ')
+        cell_text = re.sub(r'[\s\u202f]+', ' ', cell_text)  # Normalize all whitespace
+
+        # Date format: "Apr 25, 2026, 9:40:27 PM MST"
+        date_match = re.search(r'([A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2} [AP]M [A-Z]+)', cell_text)
+        if date_match:
+            date_str = date_match.group(1)
+            results.append((date_str, search_term))
+
+    return results
+
+
+def parse_watch_history(html_content: str) -> tuple[list[tuple[str, str, str, str]], dict[str, str]]:
+    """
+    Parse watch-history.html and return:
+    - list of (date, video_title, video_url, channel_name) tuples
+    - dict of {channel_name: channel_url} for unique channels
+    """
+    soup = BeautifulSoup(html_content, 'html.parser')
+    results = []
+    channels = {}  # channel_name -> channel_url
+
+    # Find all content cells with watch data
+    content_cells = soup.find_all('div', class_='content-cell')
+
+    for cell in content_cells:
+        text = cell.get_text()
+        if 'Watched' not in text:
+            continue
+
+        # Find all links in this cell
+        links = cell.find_all('a')
+        if len(links) < 1:
+            continue
+
+        # First link is the video
+        video_link = links[0]
+        video_url = video_link.get('href', '')
+        video_title = video_link.get_text()
+        # Normalize whitespace in video title
+        video_title = re.sub(r'\s+', ' ', video_title).strip()
+
+        # Skip if not a youtube watch link
+        if 'youtube.com/watch' not in video_url:
+            continue
+
+        # Second link (if exists) is the channel
+        channel_name = None
+        channel_url = None
+        if len(links) >= 2:
+            channel_link = links[1]
+            channel_url = channel_link.get('href', '')
+            channel_name = channel_link.get_text()
+            # Normalize whitespace in channel name
+            channel_name = re.sub(r'\s+', ' ', channel_name).strip()
+
+            # Only add if it's a channel link
+            if channel_url and 'youtube.com/channel' in channel_url:
+                channels[channel_name] = channel_url
+
+        # Extract the date from cell text
+        # Normalize whitespace (newlines, narrow no-break spaces, etc.)
+        cell_text = cell.get_text(separator=' ')
+        cell_text = re.sub(r'[\s\u202f]+', ' ', cell_text)
+
+        date_match = re.search(r'([A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2} [AP]M [A-Z]+)', cell_text)
+        date_str = date_match.group(1) if date_match else ''
+
+        results.append((date_str, video_title, video_url, channel_name))
+
+    return results, channels
+
+
+@app.command()
+def pullhistory(folder_name: str = typer.Argument(..., help="Name of the takeout folder in cache/historyexports/")):
+    """Extract YouTube search and watch history from Google Takeout export."""
+    base_path = f"cache/historyexports/{folder_name}"
+
+    if not os.path.exists(base_path):
+        typer.echo(f"Error: Folder not found: {base_path}")
+        raise typer.Exit(1)
+
+    output_file = f"cache/historyexports/{folder_name}.md"
+    output_lines = []
+
+    # Process search history
+    search_history_path = f"{base_path}/Takeout/YouTube and YouTube Music/history/search-history.html"
+    if os.path.exists(search_history_path):
+        typer.echo(f"Processing search history: {search_history_path}")
+        html_content = tools.readText(search_history_path)
+        search_results = parse_search_history(html_content)
+
+        output_lines.append("# Search History")
+        output_lines.append("")
+        for date_str, search_term in search_results:
+            output_lines.append(f"- {date_str} - {search_term}")
+        output_lines.append("")
+        typer.echo(f"  Found {len(search_results)} search entries")
+    else:
+        typer.echo(f"Warning: Search history file not found: {search_history_path}")
+
+    # Process watch history
+    watch_history_path = f"{base_path}/Takeout/YouTube and YouTube Music/history/watch-history.html"
+    if os.path.exists(watch_history_path):
+        typer.echo(f"Processing watch history: {watch_history_path}")
+        html_content = tools.readText(watch_history_path)
+        watch_results, channels = parse_watch_history(html_content)
+
+        output_lines.append("# Watch History")
+        output_lines.append("")
+        for date_str, video_title, video_url, channel_name in watch_results:
+            output_lines.append(f"- [{video_title}]({video_url})")
+        output_lines.append("")
+        typer.echo(f"  Found {len(watch_results)} watch entries")
+
+        # Add channels section
+        output_lines.append("# Channels")
+        output_lines.append("")
+        for channel_name, channel_url in sorted(channels.items()):
+            output_lines.append(f"- [{channel_name}]({channel_url})")
+        typer.echo(f"  Found {len(channels)} unique channels")
+    else:
+        typer.echo(f"Warning: Watch history file not found: {watch_history_path}")
+
+    # Write output file
+    tools.writeText(output_file, "\n".join(output_lines))
+    typer.echo(f"Output written to: {output_file}")
 
 
 if __name__ == "__main__":
