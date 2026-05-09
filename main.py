@@ -82,7 +82,7 @@ def all_videos(channel_url):
         'extract_flat': True,        # True = Faster, gets metadata without downloading
         'skip_download': True,
         'force_generic_extractor': False,
-        'js_runtimes': 'nodejs,deno',
+        'js_runtimes': {'nodejs': {}, 'deno': {}},
         'extractor_args': {
             'youtube': {
                 'player_client': ['web', 'android'],  # avoid the broken clients
@@ -214,7 +214,7 @@ Transcript: {j.get('transcript', '')}
         tools.writeText(txtFn, s)    
 
 
-def update():
+def update_all():
     urls = """
 https://www.youtube.com/@ClimateDN/videos
 https://www.youtube.com/@PrometheanAction/videos
@@ -293,7 +293,7 @@ def pull_transcript(video_url):
             'extract_flat': True,        # True = Faster, gets metadata without downloading
             'skip_download': True,
             'force_generic_extractor': False,
-            'js_runtimes': 'nodejs,deno',
+            'js_runtimes': {'node': {}, 'deno': {}},
         }
 
         with yt_dlp.YoutubeDL(options) as ydl:
@@ -354,7 +354,7 @@ def pull_video(video_url):
             'extract_flat': True,
             'skip_download': True,
             'force_generic_extractor': False,
-            'js_runtimes': 'nodejs,deno',
+            'js_runtimes': {'node': {}, 'deno': {}},
         }
         with yt_dlp.YoutubeDL(options) as ydl:
             info = ydl.extract_info(video_url, download=False)
@@ -419,7 +419,7 @@ def pull_video(video_url):
         print(f"  {md_file} already exists")
 
 
-def organize():
+def organize_videos():
     for fn in os.listdir("cache/videos/"):
         if not fn.endswith(".json"):
             continue
@@ -454,7 +454,7 @@ def pull(url: str = typer.Argument(..., help="YouTube video or channel URL")):
 @app.command()
 def update():
     """Update files to new version."""
-    update()
+    update_all()
 
 
 @app.command()
@@ -466,7 +466,19 @@ def summarize():
 @app.command()
 def organize():
     """Organize video transcripts."""
-    organize()
+    organize_videos()
+
+
+def format_date_iso(date_str: str) -> str:
+    """Convert date like 'Apr 25, 2026, 9:40:27 PM MST' to 'YYYY-MM-DD'."""
+    from datetime import datetime
+    # Remove timezone abbreviation (MST, PST, etc.)
+    date_str = re.sub(r' [A-Z]{2,4}$', '', date_str)
+    try:
+        dt = datetime.strptime(date_str, '%b %d, %Y, %I:%M:%S %p')
+        return dt.strftime('%Y-%m-%d')
+    except ValueError:
+        return date_str  # Return original if parsing fails
 
 
 def parse_search_history(html_content: str) -> list[tuple[str, str]]:
@@ -499,7 +511,7 @@ def parse_search_history(html_content: str) -> list[tuple[str, str]]:
         # Date format: "Apr 25, 2026, 9:40:27 PM MST"
         date_match = re.search(r'([A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2} [AP]M [A-Z]+)', cell_text)
         if date_match:
-            date_str = date_match.group(1)
+            date_str = format_date_iso(date_match.group(1))
             results.append((date_str, search_term))
 
     return results
@@ -559,7 +571,7 @@ def parse_watch_history(html_content: str) -> tuple[list[tuple[str, str, str, st
         cell_text = re.sub(r'[\s\u202f]+', ' ', cell_text)
 
         date_match = re.search(r'([A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2} [AP]M [A-Z]+)', cell_text)
-        date_str = date_match.group(1) if date_match else ''
+        date_str = format_date_iso(date_match.group(1)) if date_match else ''
 
         results.append((date_str, video_title, video_url, channel_name))
 
