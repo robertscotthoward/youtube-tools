@@ -18,9 +18,9 @@ fromSeconds, toSeconds = 30, 60
 
 
 config = {
-    'class': 'ollama',  
-    'host':'http://localhost:11434',
-    'model': 'gemma4:e4b'
+    'class': 'ollama',
+    'host': 'http://localhost:11434',
+    'model': 'llama3.1:8b'
 }
 modelstack = ModelStack.from_config(config)
 #print(modelstack.query("What city was Benjamin Franklin born in?"))

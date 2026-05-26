@@ -15,6 +15,8 @@ class ModelStack:
         cls = config.get('class')
         if cls == 'ollama':
             return OllamaModelStack(config)
+        if cls == 'vllm':
+            return VLLMModelStack(config)
         if cls == 'bedrock':
             return BedrockModelStack(config)
         raise ValueError(f"Unsupported model stack class: {cls}")
@@ -39,6 +41,27 @@ class OllamaModelStack(ModelStack):
         answer = json.loads(r.text)['response']
         return answer
 
+
+
+
+
+class VLLMModelStack(ModelStack):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def query(self, prompt):
+        host = self.config['host']
+        model = self.config['model']
+        url = f'{host}/v1/chat/completions'
+        payload = {
+            'model': model,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'stream': False
+        }
+        r = requests.post(url, json=payload)
+        if r.status_code != 200:
+            raise Exception(f"Request failed with status code {r.status_code}: {r.text}")
+        return r.json()['choices'][0]['message']['content']
 
 
 
