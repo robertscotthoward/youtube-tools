@@ -31,8 +31,10 @@ def writeJson(file, data):
         json.dump(data, f, indent=2, cls=DateTimeEncoder)
 
 def readYaml(file):
+    from ruamel.yaml import YAML
+    yaml = YAML()
     with open(file) as f:
-        return json.load(f)
+        return yaml.load(f)
 
 def writeYaml(file, data):
     with open(file, "w") as f:

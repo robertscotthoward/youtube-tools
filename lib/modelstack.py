@@ -35,7 +35,17 @@ class OllamaModelStack(ModelStack):
         OLLAMA_HOST = self.config['host']
         model = self.config['model']
         url = f'{OLLAMA_HOST}/api/generate'
-        r = requests.post(url, json={'model': model, 'prompt': prompt, 'stream': False})
+        payload = {
+            'model': model,
+            'prompt': prompt,
+            'stream': False,
+            'options': {}
+        }
+        if 'num_predict' in self.config:
+            payload['options']['num_predict'] = self.config['num_predict']
+        if 'num_ctx' in self.config:
+            payload['options']['num_ctx'] = self.config['num_ctx']
+        r = requests.post(url, json=payload)
         if r.status_code != 200:
             raise Exception(f"Request failed with status code {r.status_code}: {r.text}")
         answer = json.loads(r.text)['response']

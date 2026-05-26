@@ -17,12 +17,9 @@ app = typer.Typer()
 fromSeconds, toSeconds = 30, 60
 
 
-config = {
-    'class': 'ollama',
-    'host': 'http://localhost:11434',
-    'model': 'llama3.1:8b'
-}
-modelstack = ModelStack.from_config(config)
+cfg = tools.getYaml('config')
+modelstack = ModelStack.from_config(cfg['modelstack'])
+summarize_prompt = cfg['summarize']['prompt']
 #print(modelstack.query("What city was Benjamin Franklin born in?"))
 
 nWait = 0
@@ -195,7 +192,7 @@ def update_one(jFn):
         tools.writeJson(jFn, j)
 
     if j.get('summary') is None:
-        prompt = f"Summarize the following YouTube video transcript as markdown. Include no ASCII art or emojis:\n\n{j['transcript']}"
+        prompt = f"{summarize_prompt}\n\n{j['transcript']}"
         j['summary'] = modelstack.query(prompt)
         tools.writeJson(jFn, j)
     
@@ -270,7 +267,7 @@ def summarize_all():
 
         print(f"Summarizing {fn}...")
         transcript_text = tools.readText(txt_file)
-        prompt = f"Summarize the main points of the following YouTube video transcript as markdown. Include no ASCII art or emojis:\n\n{transcript_text}"
+        prompt = f"{summarize_prompt}\n\n{transcript_text}"
         summary = modelstack.query(prompt)
         tools.writeText(md_file, summary)
         print(f"  Created {md_file}")
@@ -409,7 +406,7 @@ def pull_video(video_url):
         if os.path.exists(txt_file):
             print(f"Summarizing transcript for {video_id}...")
             transcript_text = tools.readText(txt_file)
-            prompt = f"Summarize the main points of the following YouTube video transcript:\n\n{transcript_text}"
+            prompt = f"{summarize_prompt}\n\n{transcript_text}"
             summary = modelstack.query(prompt)
             tools.writeText(md_file, summary)
             print(f"  Created {md_file}")

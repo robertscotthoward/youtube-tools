@@ -1,0 +1,21 @@
+modelstack:
+  class: ollama
+  host: http://localhost:11434
+  model: llama3.1:8b
+  num_predict: 8192   # max tokens to generate (default ollama is 128)
+  num_ctx: 16384      # context window size
+
+summarize:
+  prompt: |
+    You are an expert research analyst. Produce a detailed, structured summary of the following YouTube video transcript.
+
+    Your summary must include:
+    - **Overview**: 2-3 sentences describing the video's subject and purpose.
+    - **Key Topics**: A bulleted list of the main topics covered.
+    - **Main Arguments & Claims**: The central arguments or positions the speaker makes.
+    - **Notable Points**: Specific facts, statistics, quotes, or examples worth remembering.
+    - **Conclusion / Takeaways**: What the viewer is meant to learn or do after watching.
+
+    Use markdown. No ASCII art. No emojis. Be thorough — do not truncate.
+
+    Transcript:
