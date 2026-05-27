@@ -22,15 +22,17 @@ modelstack = ModelStack.from_config(cfg['modelstack'])
 summarize_prompt = cfg['summarize']['prompt']
 
 
-def build_prompt(transcript_text, title=None, url=None):
-    header = ""
+def build_md_header(title=None, url=None):
+    lines = []
     if title:
-        header += f"**Title**: {title}\n"
+        lines.append(f"- Title: {title}")
     if url:
-        header += f"**URL**: {url}\n"
-    if header:
-        header += "\n"
-    return f"{summarize_prompt}\n\n{header}{transcript_text}"
+        lines.append(f"- URL: {url}")
+    return "\n".join(lines) + "\n\n" if lines else ""
+
+
+def build_prompt(transcript_text):
+    return f"{summarize_prompt}\n\n{transcript_text}"
 
 
 #print(modelstack.query("What city was Benjamin Franklin born in?"))
@@ -205,8 +207,7 @@ def update_one(jFn):
         tools.writeJson(jFn, j)
 
     if j.get('summary') is None:
-        url = j.get('url') or f"https://www.youtube.com/watch?v={j['id']}"
-        prompt = build_prompt(j['transcript'], title=j.get('title'), url=url)
+        prompt = build_prompt(j['transcript'])
         j['summary'] = modelstack.query(prompt)
         tools.writeJson(jFn, j)
     
@@ -288,8 +289,8 @@ def summarize_all():
             meta = tools.readJson(json_file)
             title = meta.get('title')
             url = meta.get('url') or f"https://www.youtube.com/watch?v={video_id}"
-        prompt = build_prompt(transcript_text, title=title, url=url)
-        summary = modelstack.query(prompt)
+        prompt = build_prompt(transcript_text)
+        summary = build_md_header(title=title, url=url) + modelstack.query(prompt)
         tools.writeText(md_file, summary)
         print(f"  Created {md_file}")
         count += 1
@@ -442,8 +443,10 @@ def pull_video(video_url):
         if os.path.exists(txt_file):
             print(f"Summarizing transcript for {video_id}...")
             transcript_text = tools.readText(txt_file)
-            prompt = build_prompt(transcript_text, title=video_data.get('title'), url=video_data.get('url') or video_url)
-            summary = modelstack.query(prompt)
+            v_title = video_data.get('title')
+            v_url = video_data.get('url') or video_url
+            prompt = build_prompt(transcript_text)
+            summary = build_md_header(title=v_title, url=v_url) + modelstack.query(prompt)
             tools.writeText(md_file, summary)
             print(f"  Created {md_file}")
         else:
