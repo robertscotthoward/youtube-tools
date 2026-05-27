@@ -20,6 +20,19 @@ fromSeconds, toSeconds = 30, 60
 cfg = tools.getYaml('config')
 modelstack = ModelStack.from_config(cfg['modelstack'])
 summarize_prompt = cfg['summarize']['prompt']
+
+
+def build_prompt(transcript_text, title=None, url=None):
+    header = ""
+    if title:
+        header += f"**Title**: {title}\n"
+    if url:
+        header += f"**URL**: {url}\n"
+    if header:
+        header += "\n"
+    return f"{summarize_prompt}\n\n{header}{transcript_text}"
+
+
 #print(modelstack.query("What city was Benjamin Franklin born in?"))
 
 nWait = 0
@@ -192,7 +205,8 @@ def update_one(jFn):
         tools.writeJson(jFn, j)
 
     if j.get('summary') is None:
-        prompt = f"{summarize_prompt}\n\n{j['transcript']}"
+        url = j.get('url') or f"https://www.youtube.com/watch?v={j['id']}"
+        prompt = build_prompt(j['transcript'], title=j.get('title'), url=url)
         j['summary'] = modelstack.query(prompt)
         tools.writeJson(jFn, j)
     
@@ -267,7 +281,14 @@ def summarize_all():
 
         print(f"Summarizing {fn}...")
         transcript_text = tools.readText(txt_file)
-        prompt = f"{summarize_prompt}\n\n{transcript_text}"
+        video_id = fn.replace(".txt", "")
+        json_file = os.path.join("cache/videos", f"{video_id}.json")
+        title, url = None, None
+        if os.path.exists(json_file):
+            meta = tools.readJson(json_file)
+            title = meta.get('title')
+            url = meta.get('url') or f"https://www.youtube.com/watch?v={video_id}"
+        prompt = build_prompt(transcript_text, title=title, url=url)
         summary = modelstack.query(prompt)
         tools.writeText(md_file, summary)
         print(f"  Created {md_file}")
@@ -392,21 +413,36 @@ def pull_video(video_url):
         transcript_text = video_data.get('transcript')
 
     # Step 2: Create txt file in summaries if it doesn't exist
+    title = video_data.get('title') if video_data else None
+    url = (video_data.get('url') if video_data else None) or video_url
+    txt_header = ""
+    if title:
+        txt_header += f"Title: {title}\n"
+    if url:
+        txt_header += f"URL: {url}\n"
+    if txt_header:
+        txt_header += "\n"
+
     if not os.path.exists(txt_file):
         if transcript_text:
-            tools.writeText(txt_file, transcript_text)
+            tools.writeText(txt_file, txt_header + transcript_text)
             print(f"  Created {txt_file}")
         else:
             print(f"  No transcript available for {video_id}")
     else:
-        print(f"  {txt_file} already exists")
+        existing = tools.readText(txt_file)
+        if url and url not in existing:
+            tools.writeText(txt_file, txt_header + existing)
+            print(f"  Updated {txt_file} with title/URL header")
+        else:
+            print(f"  {txt_file} already exists")
 
     # Step 3: Summarize if md doesn't exist (requires txt to exist)
     if not os.path.exists(md_file):
         if os.path.exists(txt_file):
             print(f"Summarizing transcript for {video_id}...")
             transcript_text = tools.readText(txt_file)
-            prompt = f"{summarize_prompt}\n\n{transcript_text}"
+            prompt = build_prompt(transcript_text, title=video_data.get('title'), url=video_data.get('url') or video_url)
             summary = modelstack.query(prompt)
             tools.writeText(md_file, summary)
             print(f"  Created {md_file}")
