@@ -111,7 +111,7 @@ def fetch_subscriptions():
             snippet = ch['snippet']
             custom_url = snippet.get('customUrl')
             url = f"https://www.youtube.com/{custom_url}" if custom_url else f"https://www.youtube.com/channel/{ch_id}"
-            description = snippet.get('description', '').strip()
+            description = re.sub(r'\s+', ' ', snippet.get('description', '')).strip()
             channel_info_map[ch_id] = (url, description)
 
     subscriptions = []
