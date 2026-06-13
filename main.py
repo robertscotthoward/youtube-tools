@@ -14,6 +14,9 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = typer.Typer()
 
@@ -40,10 +43,9 @@ def build_prompt(transcript_text):
 
 
 def get_youtube_service():
-    yt_cfg = cfg['youtube']
-    client_id = yt_cfg['client_id']
-    client_secret = yt_cfg['client_secret']
-    scopes = yt_cfg['scopes']
+    client_id = os.environ['YOUTUBE_CLIENT_ID']
+    client_secret = os.environ['YOUTUBE_CLIENT_SECRET']
+    scopes = os.environ['YOUTUBE_SCOPES'].split(',')
     token_file = 'cache/youtube_token.json'
 
     creds = None
