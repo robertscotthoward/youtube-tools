@@ -97,8 +97,8 @@ def fetch_subscriptions():
         if not next_page_token:
             break
 
-    # Resolve @handle URLs in batches of 50
-    channel_url_map = {}
+    # Resolve @handle URLs and descriptions in batches of 50
+    channel_info_map = {}  # channel_id -> (url, description)
     ids = [channel_id for _, channel_id in raw]
     for i in range(0, len(ids), 50):
         batch = ids[i:i + 50]
@@ -108,16 +108,16 @@ def fetch_subscriptions():
         ).execute()
         for ch in ch_response.get('items', []):
             ch_id = ch['id']
-            custom_url = ch['snippet'].get('customUrl')
-            if custom_url:
-                channel_url_map[ch_id] = f"https://www.youtube.com/{custom_url}"
-            else:
-                channel_url_map[ch_id] = f"https://www.youtube.com/channel/{ch_id}"
+            snippet = ch['snippet']
+            custom_url = snippet.get('customUrl')
+            url = f"https://www.youtube.com/{custom_url}" if custom_url else f"https://www.youtube.com/channel/{ch_id}"
+            description = snippet.get('description', '').strip()
+            channel_info_map[ch_id] = (url, description)
 
     subscriptions = []
     for title, channel_id in raw:
-        url = channel_url_map.get(channel_id, f"https://www.youtube.com/channel/{channel_id}")
-        subscriptions.append((title, url))
+        url, description = channel_info_map.get(channel_id, (f"https://www.youtube.com/channel/{channel_id}", ''))
+        subscriptions.append((title, url, description))
 
     return sorted(subscriptions, key=lambda x: x[0].lower())
 
@@ -599,8 +599,11 @@ def organize():
 def subscriptions():
     """List your YouTube subscriptions."""
     subs = fetch_subscriptions()
-    for title, url in subs:
-        typer.echo(f"- [{title}]({url})")
+    for title, url, description in subs:
+        line = f"- [{title}]({url})"
+        if description:
+            line += f" - {description}"
+        typer.echo(line)
 
 
 def format_date_iso(date_str: str) -> str:
