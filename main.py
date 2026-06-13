@@ -10,6 +10,10 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from lib.modelstack import ModelStack
 import lib.tools as tools
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
 
 app = typer.Typer()
 
@@ -35,6 +39,82 @@ def build_prompt(transcript_text):
     return f"{summarize_prompt}\n\n{transcript_text}"
 
 
+def get_youtube_service():
+    yt_cfg = cfg['youtube']
+    client_id = yt_cfg['client_id']
+    client_secret = yt_cfg['client_secret']
+    scopes = yt_cfg['scopes']
+    token_file = 'cache/youtube_token.json'
+
+    creds = None
+    if os.path.exists(token_file):
+        creds = Credentials.from_authorized_user_file(token_file, scopes)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            client_config = {
+                "installed": {
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            }
+            flow = InstalledAppFlow.from_client_config(client_config, scopes)
+            creds = flow.run_local_server(port=0)
+        os.makedirs('cache', exist_ok=True)
+        tools.writeText(token_file, creds.to_json())
+
+    return build('youtube', 'v3', credentials=creds)
+
+
+def fetch_subscriptions():
+    service = get_youtube_service()
+    subscriptions = []
+    next_page_token = None
+
+    while True:
+        request = service.subscriptions().list(
+            part='snippet',
+            mine=True,
+            maxResults=50,
+            pageToken=next_page_token,
+            order='alphabetical',
+        )
+        response = request.execute()
+
+        for item in response.get('items', []):
+            snippet = item['snippet']
+            title = snippet['title']
+            resource_id = snippet['resourceId']
+            channel_id = resource_id['channelId']
+
+            ch_response = service.channels().list(
+                part='snippet',
+                id=channel_id,
+            ).execute()
+            ch_items = ch_response.get('items', [])
+            if ch_items:
+                custom_url = ch_items[0]['snippet'].get('customUrl')
+                if custom_url:
+                    url = f"https://www.youtube.com/{custom_url}"
+                else:
+                    url = f"https://www.youtube.com/channel/{channel_id}"
+            else:
+                url = f"https://www.youtube.com/channel/{channel_id}"
+
+            subscriptions.append((title, url))
+
+        next_page_token = response.get('nextPageToken')
+        if not next_page_token:
+            break
+
+    return sorted(subscriptions, key=lambda x: x[0].lower())
+
+
 #print(modelstack.query("What city was Benjamin Franklin born in?"))
 
 nWait = 0
@@ -54,7 +134,10 @@ def get_json_cache(filename, func, force=False):
 
 
 def get_transcript(video_url):
-    video_id = video_url.split("v=")[1]
+    if "youtu.be/" in video_url:
+        video_id = video_url.split("youtu.be/")[1].split("?")[0]
+    else:
+        video_id = video_url.split("v=")[1].split("&")[0]
     ytt_api = YouTubeTranscriptApi()
     
     try:
@@ -503,6 +586,14 @@ def summarize():
 def organize():
     """Organize video transcripts."""
     organize_videos()
+
+
+@app.command()
+def subscriptions():
+    """List your YouTube subscriptions."""
+    subs = fetch_subscriptions()
+    for title, url in subs:
+        typer.echo(f"- [{title}]({url})")
 
 
 def format_date_iso(date_str: str) -> str:
