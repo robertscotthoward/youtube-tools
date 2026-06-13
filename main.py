@@ -73,44 +73,49 @@ def get_youtube_service():
 
 def fetch_subscriptions():
     service = get_youtube_service()
-    subscriptions = []
+    raw = []  # list of (title, channel_id)
     next_page_token = None
 
     while True:
-        request = service.subscriptions().list(
+        response = service.subscriptions().list(
             part='snippet',
             mine=True,
             maxResults=50,
             pageToken=next_page_token,
             order='alphabetical',
-        )
-        response = request.execute()
+        ).execute()
 
         for item in response.get('items', []):
             snippet = item['snippet']
             title = snippet['title']
-            resource_id = snippet['resourceId']
-            channel_id = resource_id['channelId']
-
-            ch_response = service.channels().list(
-                part='snippet',
-                id=channel_id,
-            ).execute()
-            ch_items = ch_response.get('items', [])
-            if ch_items:
-                custom_url = ch_items[0]['snippet'].get('customUrl')
-                if custom_url:
-                    url = f"https://www.youtube.com/{custom_url}"
-                else:
-                    url = f"https://www.youtube.com/channel/{channel_id}"
-            else:
-                url = f"https://www.youtube.com/channel/{channel_id}"
-
-            subscriptions.append((title, url))
+            channel_id = snippet['resourceId']['channelId']
+            raw.append((title, channel_id))
 
         next_page_token = response.get('nextPageToken')
         if not next_page_token:
             break
+
+    # Resolve @handle URLs in batches of 50
+    channel_url_map = {}
+    ids = [channel_id for _, channel_id in raw]
+    for i in range(0, len(ids), 50):
+        batch = ids[i:i + 50]
+        ch_response = service.channels().list(
+            part='snippet',
+            id=','.join(batch),
+        ).execute()
+        for ch in ch_response.get('items', []):
+            ch_id = ch['id']
+            custom_url = ch['snippet'].get('customUrl')
+            if custom_url:
+                channel_url_map[ch_id] = f"https://www.youtube.com/{custom_url}"
+            else:
+                channel_url_map[ch_id] = f"https://www.youtube.com/channel/{ch_id}"
+
+    subscriptions = []
+    for title, channel_id in raw:
+        url = channel_url_map.get(channel_id, f"https://www.youtube.com/channel/{channel_id}")
+        subscriptions.append((title, url))
 
     return sorted(subscriptions, key=lambda x: x[0].lower())
 
