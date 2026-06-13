@@ -13,4 +13,6 @@ dependencies = [
     "boto3>=1.41.5",
     "typer>=0.24.2",
     "beautifulsoup4>=4.14.3",
+    "google-api-python-client>=2.154.0",
+    "google-auth-oauthlib>=1.2.1",
 ]
