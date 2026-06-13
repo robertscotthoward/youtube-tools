@@ -19,3 +19,7 @@ summarize:
     Use markdown. No ASCII art. No emojis. Be thorough — do not truncate.
 
     Transcript:
+
+youtube:
+  scopes:
+    - "https://www.googleapis.com/auth/youtube.readonly"
