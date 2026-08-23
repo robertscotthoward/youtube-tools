@@ -1,4 +1,12 @@
+uv run main.py pull https://www.youtube.com/@TheComputerGraveyard
+uv run main.py pull https://www.youtube.com/@CtrlAltFailYT
+uv run main.py pull https://www.youtube.com/@techdisctrict
+uv run main.py pull https://www.youtube.com/@OnceEverywhere-m5m
+uv run main.py pull https://www.youtube.com/@Tech-Of-History
+uv run main.py pull https://www.youtube.com/@TheHiddenPartsofHistory
+uv run main.py pull https://www.youtube.com/@theeconomyhistorian/videos
 uv run main.py pull https://www.youtube.com/@PrometheanAction/videos
+uv run main.py pull https://www.youtube.com/@PrometheanOverviews/videos
 uv run main.py pull https://www.youtube.com/@AmericaUncovered/videos
 uv run main.py pull https://www.youtube.com/@BillWhittleChannel/videos
 uv run main.py pull https://www.youtube.com/@ChinaUncensored/videos
@@ -6,7 +14,7 @@ uv run main.py pull https://www.youtube.com/@ChrisWillx/videos
 uv run main.py pull https://www.youtube.com/@ClimateDN/videos
 uv run main.py pull https://www.youtube.com/@DailySignal/videos
 uv run main.py pull https://www.youtube.com/@DrJordanBPetersonClips/videos
-uv run main.py pull https://www.youtube.com/@EconemyMeetHistory/videos
+uv run main.py pull https://www.youtube.com/@EconomyMeetHistory/videos
 uv run main.py pull https://www.youtube.com/@EmergingVoicesStudio/videos
 uv run main.py pull https://www.youtube.com/@Europe-Informed-Connected/videos
 uv run main.py pull https://www.youtube.com/@GDiesen1/videos

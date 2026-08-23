@@ -25,7 +25,7 @@ load_dotenv()
 app = typer.Typer()
 
 
-fromSeconds, toSeconds = 30, 60
+fromSeconds, toSeconds = 25, 35
 
 
 cfg = tools.getYaml('config')
@@ -549,6 +549,14 @@ def pull_video(video_url):
         print(f"  {md_file} already exists")
 
 
+def sanitize_folder_name(name):
+    """Make a string safe to use as a Windows folder name."""
+    # Replace characters invalid in Windows paths, then strip
+    # leading/trailing spaces and dots (Windows silently drops them).
+    name = re.sub(r'[<>:"/\\|?*]', '_', name)
+    return name.strip(' .')
+
+
 def organize_videos():
     for fn in os.listdir("cache/videos/"):
         if not fn.endswith(".json"):
@@ -558,7 +566,7 @@ def organize_videos():
         if not j.get('channel_name'):
             continue
         channel_name = j['channel_name']
-        dstFolder = f"cache/channels/{channel_name}"
+        dstFolder = f"cache/channels/{sanitize_folder_name(channel_name)}"
         channel_url = f"https://www.youtube.com/@{channel_name}"
         if not os.path.exists(dstFolder):
             os.makedirs(dstFolder)
@@ -776,4 +784,10 @@ def pullhistory(folder_name: str = typer.Argument(..., help="Name of the takeout
 
 
 if __name__ == "__main__":
-    app()
+    try:
+        app()
+    except Exception as e:
+        if "YouTube is blocking requests from your IP" in str(e):
+            print("YouTube is blocking requests from your IP. Try again later.")
+            sys.exit(1)
+        raise
