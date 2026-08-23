@@ -23,3 +23,7 @@ summarize:
 youtube:
   scopes:
     - "https://www.googleapis.com/auth/youtube.readonly"
+
+pullall:
+  channel_delay_min: 45
+  channel_delay_max: 90

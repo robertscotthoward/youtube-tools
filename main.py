@@ -590,6 +590,28 @@ def pull(url: str = typer.Argument(..., help="YouTube video or channel URL")):
 
 
 @app.command()
+def pullall():
+    """Pull transcripts for every channel listed in channels.txt.
+
+    Stops the entire process immediately if YouTube blocks requests from this IP.
+    """
+    channels_file = "channels.txt"
+    if not os.path.exists(channels_file):
+        typer.echo(f"{channels_file} not found")
+        raise typer.Exit(1)
+
+    channel_names = [line.strip() for line in tools.readText(channels_file).splitlines() if line.strip()]
+    for i, channel_name in enumerate(channel_names):
+        if i > 0:
+            delay = random.randint(cfg['pullall']['channel_delay_min'], cfg['pullall']['channel_delay_max'])
+            typer.echo(f"Waiting {delay}s before next channel...")
+            sleep(delay)
+        url = f"https://www.youtube.com/@{channel_name}/videos"
+        typer.echo(f"Pulling {url}...")
+        pull_transcripts(url)
+
+
+@app.command()
 def update():
     """Update files to new version."""
     update_all()
